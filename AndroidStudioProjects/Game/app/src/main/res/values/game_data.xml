@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="PlayerCenterX">player_center_x</string>
+    <string name="PlayerCenterY">player_center_y</string>
+    <string name="PlayerCenterZ">player_center_z</string>
+    <string name="PlayerOrientationX">player_orientation_x</string>
+    <string name="PlayerOrientationY">player_orientation_y</string>
+    <string name="PlayerOrientationZ">player_orientation_z</string>
+    <string name="PlayerOrientationW">player_orientation_w</string>
+    <string name="MazeSeed">maze_seed</string>
+</resources>
