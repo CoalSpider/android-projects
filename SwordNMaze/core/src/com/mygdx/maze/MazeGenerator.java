@@ -1,5 +1,6 @@
 package com.mygdx.maze;
 
+import com.mygdx.Util.TreeNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -10,9 +11,8 @@ import java.util.Stack;
  *
  */
 public class MazeGenerator {
-
     private MazeCell[][] mazeAsGrid;
-    private TreeMaze<MazeCell> mazeAsTree;
+    private TreeNode<MazeCell> mazeAsTree;
     private static final Random RANDOM = new Random(1993);
     private final int rows;
     private final int columns;
@@ -37,8 +37,8 @@ public class MazeGenerator {
     private void initFirstRow() {
         for (int i = 0; i < columns; i++) {
             mazeAsGrid[0][i] = new MazeCell(0, i);
-            mazeAsGrid[0][i].visited = true;
-            mazeAsGrid[0][i].hasRightWall = false;
+            mazeAsGrid[0][i].setVisited(true);
+            mazeAsGrid[0][i].setHasRightWall(false);
         }
     }
 
@@ -48,8 +48,8 @@ public class MazeGenerator {
             if (mazeAsGrid[i][0] == null) {
                 mazeAsGrid[i][0] = new MazeCell(i, 0);
             }
-            mazeAsGrid[i][0].visited = true;
-            mazeAsGrid[i][0].hasBottomWall = false;
+            mazeAsGrid[i][0].setVisited(true);
+            mazeAsGrid[i][0].setHasBottomWall(false);
         }
     }
 
@@ -68,10 +68,17 @@ public class MazeGenerator {
      */
     public void generate() {
         Stack<MazeCell> mazeStack = new Stack<MazeCell>();
+        // pick a random cell in the maze
         MazeCell startCell = getRandomMazeCell();
-        startCell.visited = true;
+        // add to the stack
+        startCell.setVisited(true);
         mazeStack.push(startCell);
-
+        int depth = 0;
+        
+        // setup root node of the maze tree
+        mazeAsTree = new TreeNode<MazeCell>(mazeStack.peek());
+        TreeNode<MazeCell> currentNode = mazeAsTree;
+        
         MazeCell currentCell;
         while (mazeStack.isEmpty() == false) {
             // set curent cell to top cell in stack
@@ -79,12 +86,21 @@ public class MazeGenerator {
             List<MazeCell> unvisited = getUnvisitedNearbyCells(currentCell);
             // if all nearby cells have been visisted backtrack
             if (unvisited.isEmpty()) {
+                // set current node as parent (move up tree)
+                currentNode = currentNode.getParent();
+                // backtrack
                 mazeStack.pop();
                 continue;
             }
             // otherwise carve a passge to a random unvisited nearby cell
             MazeCell nextCell = unvisited.get(RANDOM.nextInt(unvisited.size()));
-            nextCell.visited = true;
+            nextCell.setVisited(true);
+            nextCell.visitedCount = depth++;
+            // add next cell as child (ie they connect)
+            TreeNode<MazeCell> next = new TreeNode<MazeCell>(nextCell);
+            currentNode.addChild(next);
+            currentNode = next;
+            // psuh to stack
             carvePassage(currentCell, nextCell);
             mazeStack.push(nextCell);
         }
@@ -109,33 +125,33 @@ public class MazeGenerator {
      */
     private List<MazeCell> getUnvisitedNearbyCells(MazeCell cell) {
         List<MazeCell> unvisited = new ArrayList<MazeCell>();
-        int row = cell.row;
-        int column = cell.column;
+        int row = cell.getRow();
+        int column = cell.getColumn();
         // if "above" row is not the first row
         if (row - 1 > 0) {
             MazeCell c = mazeAsGrid[row - 1][column];
-            if (c.visited == false) {
+            if (c.isVisited() == false) {
                 unvisited.add(c);
             }
         }
         // if "below" is within the maze
         if (row + 1 < rows) {
             MazeCell c = mazeAsGrid[row + 1][column];
-            if (c.visited == false) {
+            if (c.isVisited() == false) {
                 unvisited.add(c);
             }
         }
         // if "left" is not the first column
         if (column - 1 > 0) {
             MazeCell c = mazeAsGrid[row][column - 1];
-            if (c.visited == false) {
+            if (c.isVisited() == false) {
                 unvisited.add(c);
             }
         }
         // if "right" is within the maze
         if (column + 1 < columns) {
             MazeCell c = mazeAsGrid[row][column + 1];
-            if (c.visited == false) {
+            if (c.isVisited() == false) {
                 unvisited.add(c);
             }
         }
@@ -144,34 +160,55 @@ public class MazeGenerator {
     }
 
     private void carvePassage(MazeCell current, MazeCell next) {
+        int currentRow = current.getRow();
+        int currentColumn = current.getColumn();
+        int nextRow = next.getRow();
+        int nextColumn = next.getColumn();
         // check if same cell loc
-        if (next.row == current.row && next.column == current.column) {
+        if (nextRow == currentRow && nextColumn == currentColumn) {
             throw new IllegalArgumentException("current and next have same location");
         }
         // check if cells are adjacemt
-        if (Math.abs(next.row - current.row) > 1 || Math.abs(next.column - current.column) > 1) {
+        if (Math.abs(nextRow - currentRow) > 1 || Math.abs(nextColumn - currentColumn) > 1) {
             throw new IllegalArgumentException("current and next cell are not ajacent");
         }
 
-        if (next.row == current.row) {
-            if (next.column > current.column) {
+        if (nextRow == currentRow) {
+            if (nextColumn > currentColumn) {
                 // carve "right"
-                current.hasRightWall = false;
+                current.setHasRightWall(false);
             } else {
                 // carve "left"
-                next.hasRightWall = false;
+                next.setHasRightWall(false);
             }
         } else {
-            if (next.row > current.row) {
+            if (nextRow > currentRow) {
                 // carve "down"
-                current.hasBottomWall = false;
+                current.setHasBottomWall(false);
             } else {
                 // carve "up"
-                next.hasBottomWall = false;
+                next.setHasBottomWall(false);
             }
         }
     }
 
+    public MazeCell[][] getMazeAsGrid() {
+        return mazeAsGrid;
+    }
+
+    public TreeNode<MazeCell> getMazeAsTree() {
+        return mazeAsTree;
+    }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public int getColumns() {
+        return columns;
+    }
+
+    
     /* 
     * =========================================================================
     * TEST CODE
@@ -182,12 +219,42 @@ public class MazeGenerator {
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < columns; j++) {
                 MazeCell c = mazeAsGrid[i][j];
-                maze.append(c.hasBottomWall ? "_" : " ");
-                maze.append(c.hasRightWall ? "|" : " ");
+                maze.append(c.hasBottomWall() ? "_" : " ");
+                maze.append(c.hasRightWall() ? "|" : " ");
             }
             maze.append("\n");
         }
         System.out.println(maze.toString());
+    }
+    private void printMaze2() {
+        StringBuilder maze = new StringBuilder();
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < columns; j++) {
+                MazeCell c = mazeAsGrid[i][j];
+                maze.append((c.visitedCount<10)? "0"+c.visitedCount+" ":c.visitedCount+" ");
+            }
+            maze.append("\n");
+        }
+        System.out.println(maze.toString());
+    }
+    private void printTree(TreeNode<MazeCell> node, String tabs){
+        System.out.println(tabs+node.getData());
+        if(node.isLeaf()){
+            return;
+        }
+        for(int i = 0; i < node.getChildren().size(); i++){
+            printTree(node.getChildren().get(i),tabs+"\t");
+        }
+    }
+    
+    private void printTree(TreeNode<MazeCell> node, int depth){
+        System.out.println(depth+" "+node);
+        if(node.isLeaf()){
+            return;
+        }
+        for(int i = 0; i < node.getChildren().size(); i++){
+            printTree(node.getChildren().get(i),depth+1);
+        }
     }
 
     public static void main(String[] args) {
@@ -195,5 +262,8 @@ public class MazeGenerator {
         mg.printMaze();
         mg.generate();
         mg.printMaze();
+        mg.printMaze2();
+        mg.printTree(mg.mazeAsTree,"");
+        mg.printTree(mg.mazeAsTree,0);
     }
 }
