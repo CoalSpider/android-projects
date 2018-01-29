@@ -17,7 +17,7 @@ public class MazeGenerator {
     private final int rows;
     private final int columns;
 
-    MazeGenerator(int rows, int columns) {
+    public MazeGenerator(int rows, int columns) {
         // we need to add a additonal row and column to account for the fact that maze cells are defined by only two walls
         // that means the first row is simply cells with a bottom wall
         // and the first column is simply cells with a right wall
@@ -256,6 +256,13 @@ public class MazeGenerator {
             printTree(node.getChildren().get(i),depth+1);
         }
     }
+    /*
+    _ _ _ _ _ 
+   |  _   _ _|
+   |_ _|_ _  |
+   |   |  _ _|
+   | |_ _|_  |
+   |_ _ _ _ _|*/
 
     public static void main(String[] args) {
         MazeGenerator mg = new MazeGenerator(5, 5);
