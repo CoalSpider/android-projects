@@ -1,6 +1,6 @@
 package com.mygdx.maze;
 
-import com.mygdx.Util.TreeNode;
+import com.mygdx.util2.TreeNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -11,9 +11,10 @@ import java.util.Stack;
  *
  */
 public class MazeGenerator {
+
     private MazeCell[][] mazeAsGrid;
     private TreeNode<MazeCell> mazeAsTree;
-    private static final Random RANDOM = new Random(1993);
+    private final Random RANDOM;
     private final int rows;
     private final int columns;
 
@@ -23,6 +24,18 @@ public class MazeGenerator {
         // and the first column is simply cells with a right wall
         this.rows = rows + 1;
         this.columns = columns + 1;
+        RANDOM = new Random();
+        init();
+    }
+    
+    /** @param seed the seed to use for random generation **/
+    public MazeGenerator(int rows, int columns, int seed) {
+        // we need to add a additonal row and column to account for the fact that maze cells are defined by only two walls
+        // that means the first row is simply cells with a bottom wall
+        // and the first column is simply cells with a right wall
+        this.rows = rows + 1;
+        this.columns = columns + 1;
+        RANDOM = new Random(seed);
         init();
     }
 
@@ -74,11 +87,11 @@ public class MazeGenerator {
         startCell.setVisited(true);
         mazeStack.push(startCell);
         int depth = 0;
-        
+
         // setup root node of the maze tree
         mazeAsTree = new TreeNode<MazeCell>(mazeStack.peek());
         TreeNode<MazeCell> currentNode = mazeAsTree;
-        
+
         MazeCell currentCell;
         while (mazeStack.isEmpty() == false) {
             // set curent cell to top cell in stack
@@ -159,22 +172,19 @@ public class MazeGenerator {
         return unvisited;
     }
 
-    private void carvePassage(MazeCell current, MazeCell next) {
-        int currentRow = current.getRow();
-        int currentColumn = current.getColumn();
-        int nextRow = next.getRow();
-        int nextColumn = next.getColumn();
-        // check if same cell loc
-        if (nextRow == currentRow && nextColumn == currentColumn) {
-            throw new IllegalArgumentException("current and next have same location");
-        }
-        // check if cells are adjacemt
-        if (Math.abs(nextRow - currentRow) > 1 || Math.abs(nextColumn - currentColumn) > 1) {
-            throw new IllegalArgumentException("current and next cell are not ajacent");
-        }
-
-        if (nextRow == currentRow) {
-            if (nextColumn > currentColumn) {
+    /**
+     * Every MazeCell starts containing a left and bottom wall. This method
+     * removes a wall between two cells so they are connected / form a passage
+     * This method modifies the given cells
+     *
+     * @param currrent the start cell
+     * @param next the end cell
+     * @throws IllegalArgumentException if the cells are either the same
+     * location or not adjacent
+     */
+    private void carvePassage(MazeCell current, MazeCell next) throws IllegalArgumentException {
+        if (next.getRow() == current.getRow()) {
+            if (next.getColumn() > current.getColumn()) {
                 // carve "right"
                 current.setHasRightWall(false);
             } else {
@@ -182,7 +192,7 @@ public class MazeGenerator {
                 next.setHasRightWall(false);
             }
         } else {
-            if (nextRow > currentRow) {
+            if (next.getRow() > current.getRow()) {
                 // carve "down"
                 current.setHasBottomWall(false);
             } else {
@@ -208,13 +218,12 @@ public class MazeGenerator {
         return columns;
     }
 
-    
     /* 
     * =========================================================================
     * TEST CODE
     * =========================================================================
      */
-    private void printMaze() {
+    private String mazeAsString() {
         StringBuilder maze = new StringBuilder();
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < columns; j++) {
@@ -224,53 +233,57 @@ public class MazeGenerator {
             }
             maze.append("\n");
         }
-        System.out.println(maze.toString());
+        return maze.toString();
     }
-    private void printMaze2() {
+
+    // prints visited count for maze
+    private String mazeAsStringVisited() {
         StringBuilder maze = new StringBuilder();
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < columns; j++) {
                 MazeCell c = mazeAsGrid[i][j];
-                maze.append((c.visitedCount<10)? "0"+c.visitedCount+" ":c.visitedCount+" ");
+                maze.append((c.visitedCount < 10) ? "0" + c.visitedCount + " " : c.visitedCount + " ");
             }
             maze.append("\n");
         }
-        System.out.println(maze.toString());
+        return maze.toString();
     }
-    private void printTree(TreeNode<MazeCell> node, String tabs){
-        System.out.println(tabs+node.getData());
-        if(node.isLeaf()){
+
+    // prints tree depth
+    private void printTree(TreeNode<MazeCell> node, int depth) {
+        System.out.println(depth + " " + node);
+        if (node.isLeaf()) {
             return;
         }
-        for(int i = 0; i < node.getChildren().size(); i++){
-            printTree(node.getChildren().get(i),tabs+"\t");
+        for (int i = 0; i < node.getChildren().size(); i++) {
+            printTree(node.getChildren().get(i), depth + 1);
         }
     }
-    
-    private void printTree(TreeNode<MazeCell> node, int depth){
-        System.out.println(depth+" "+node);
-        if(node.isLeaf()){
-            return;
-        }
-        for(int i = 0; i < node.getChildren().size(); i++){
-            printTree(node.getChildren().get(i),depth+1);
-        }
-    }
-    /*
-    _ _ _ _ _ 
-   |  _   _ _|
-   |_ _|_ _  |
-   |   |  _ _|
-   | |_ _|_  |
-   |_ _ _ _ _|*/
 
     public static void main(String[] args) {
-        MazeGenerator mg = new MazeGenerator(5, 5);
-        mg.printMaze();
+        // assuming random seed 1993
+        MazeGenerator mg = new MazeGenerator(5, 5, 1993);
+        // confirms that maze starts in good state;
+        String expectedStart =// 
+                "  _ _ _ _ _ \n"+//
+                " |_|_|_|_|_|\n"+//
+                " |_|_|_|_|_|\n"+//
+                " |_|_|_|_|_|\n"+//
+                " |_|_|_|_|_|\n"+//
+                " |_|_|_|_|_|\n";//
+        System.out.println("Maze starts in good state: " + mg.mazeAsString().equals(expectedStart));
         mg.generate();
-        mg.printMaze();
-        mg.printMaze2();
-        mg.printTree(mg.mazeAsTree,"");
-        mg.printTree(mg.mazeAsTree,0);
+        // confirm that maze ends in good state
+        String expectedMaze =// 
+                "  _ _ _ _ _ \n"+//
+                " |  _   _ _|\n"+//
+                " |_ _|_ _  |\n"+//
+                " |   |  _ _|\n"+//
+                " | |_ _|_  |\n"+//
+                " |_ _ _ _ _|\n";//
+        System.out.println("Maze ended in good state: " + mg.mazeAsString().equals(expectedMaze));
+        
+        // confirm tree contains no loops
+        // confirm tree is valid
     }
 }

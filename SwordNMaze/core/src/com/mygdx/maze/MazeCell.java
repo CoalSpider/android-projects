@@ -5,12 +5,19 @@
  */
 package com.mygdx.maze;
 
+import com.badlogic.gdx.math.Vector2;
+import com.mygdx.util2.Settings;
+
 /**
  *
  * @author Ben Norman
+ * 
+ *<pre>
+ *MazeCell are defined as a grid cell with right and bottom walls
+ *This is to allow for ease of use with the Recursive Backtracking (maze generation) algorithm
+ *</pre>
  */
 public class MazeCell {
-    // package private so I dont have to write getters everywhere
     private boolean hasRightWall;
     private boolean hasBottomWall;
     private boolean visited;
@@ -18,6 +25,8 @@ public class MazeCell {
     private final int column;
     // used for debugging
     int visitedCount;
+    
+    private final Vector2 position;
     
     /** creates a maze cell at the given row and column with both a right and bottom wall that has not been visited **/
     public MazeCell(int row, int column) {
@@ -27,6 +36,7 @@ public class MazeCell {
         this.hasBottomWall = true;
         this.visited = false;
         this.visitedCount = 0;
+        this.position = new Vector2(this.column,this.row).scl(Settings.MAZE_SCALE);
     }
 
     public boolean hasRightWall() {
@@ -59,5 +69,9 @@ public class MazeCell {
 
     public int getColumn() {
         return column;
+    }
+    
+    public Vector2 asVector(){
+        return position;
     }
 }

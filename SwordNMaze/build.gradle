@@ -98,11 +98,17 @@ project(":html") {
 
 project(":core") {
     apply plugin: "java"
-
+    
+    // added 1/30/2018
+    sourceSets.test.java.srcDirs = ["/test"]
 
     dependencies {
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
         
+        // added 1/30/2018
+        testCompile "junit:junit:4.12"
+       // testCompile "org.mockito:mockito-core:2.2.7"
+        testCompile "com.badlogicgames.gdx:gdx:$gdxVersion"
     }
 }
 

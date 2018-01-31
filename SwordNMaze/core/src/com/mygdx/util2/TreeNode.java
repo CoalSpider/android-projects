@@ -1,4 +1,4 @@
-package com.mygdx.Util;
+package com.mygdx.util2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,5 +54,9 @@ public class TreeNode<T> {
 
     public boolean isLeaf() {
         return children == null || children.isEmpty();
+    }
+    
+    public boolean isRoot(){
+        return parent==null;
     }
 }

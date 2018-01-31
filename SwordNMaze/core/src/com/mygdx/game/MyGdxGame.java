@@ -17,8 +17,10 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Quaternion;
+import com.mygdx.ai.SimpleAI;
 import com.mygdx.maze.MazeCell;
 import com.mygdx.maze.MazeGenerator;
+import com.mygdx.util2.TreeNode;
 import java.util.ArrayList;
 import java.util.List;
 //import com.badlogic.gdx.graphics.Texture;
@@ -38,9 +40,13 @@ public class MyGdxGame extends ApplicationAdapter {
     public Model bottomWall;
     public Model rightWall;
     public Model cornerWall;
+    public Model simpleAI;
     public List<ModelInstance> instances;
     //lighting
     public Environment environment;
+    
+    // ai
+    SimpleAI ai;
 
     @Override
     public void create() {
@@ -51,6 +57,7 @@ public class MyGdxGame extends ApplicationAdapter {
         initCamera();
         initModels();
         initMaze();
+        initAI();
     }
 
     private void initCamera() {
@@ -81,6 +88,7 @@ public class MyGdxGame extends ApplicationAdapter {
         instance = new ModelInstance(model);
     }
 
+    private TreeNode<MazeCell> tree;
     private void initMaze() {
         ModelBuilder mb = new ModelBuilder();
         instances = new ArrayList<ModelInstance>();
@@ -93,7 +101,7 @@ public class MyGdxGame extends ApplicationAdapter {
         cornerWall = mb.createBox(0.1f, 1f, 0.1f,
                 new Material(ColorAttribute.createDiffuse(Color.GREEN)),
                 Usage.Position | Usage.Normal);
-        MazeGenerator generator = new MazeGenerator(25, 25);
+        MazeGenerator generator = new MazeGenerator(5, 5);
         generator.generate();
         MazeCell[][] grid = generator.getMazeAsGrid();
         // maze if flipped over "z" axis relative to test code in maze generator
@@ -118,6 +126,18 @@ public class MyGdxGame extends ApplicationAdapter {
                 }
             }
         }
+        tree = generator.getMazeAsTree();
+    }
+    ModelInstance aimodel; 
+    private void initAI(){
+        ModelBuilder mb = new ModelBuilder();
+        simpleAI = mb.createBox(0.25f, 2f, 0.25f,
+                new Material(ColorAttribute.createDiffuse(Color.PURPLE)),
+                Usage.Position | Usage.Normal);
+        
+        aimodel = new ModelInstance(simpleAI);
+        instances.add(aimodel);
+        ai = new SimpleAI(tree,tree.getChildren().get(0));
     }
 
     // might casuse some catch misses
@@ -158,6 +178,10 @@ public class MyGdxGame extends ApplicationAdapter {
         //batch.draw(img, 0, 0);
         //batch.end();
         handleInputs();
+        ai.update();
+        ModelInstance mi = instances.get(instances.indexOf(aimodel));
+        mi.transform.setTranslation(ai.getPosition().y, 1, ai.getPosition().x);
+       // System.out.println(mi.transform);
         cam.update();
         //camController.update();
 
@@ -183,5 +207,7 @@ public class MyGdxGame extends ApplicationAdapter {
         bottomWall.dispose();
         rightWall.dispose();
         cornerWall.dispose();
+        
+        simpleAI.dispose();
     }
 }
