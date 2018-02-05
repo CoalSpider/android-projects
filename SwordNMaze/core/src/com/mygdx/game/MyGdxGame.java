@@ -2,7 +2,7 @@ package com.mygdx.game;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
@@ -14,13 +14,18 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
-import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
+import com.badlogic.gdx.graphics.g3d.environment.PointLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
-import com.badlogic.gdx.math.Quaternion;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
 import com.mygdx.ai.SimpleAI;
 import com.mygdx.maze.MazeCell;
 import com.mygdx.maze.MazeGenerator;
+import com.mygdx.model.MazeBuilder;
+import com.mygdx.model.MergedCubes;
 import com.mygdx.util2.TreeNode;
+import com.mygdx.view.CustomCameraController;
+import com.mygdx.view.RenderData;
 import java.util.ArrayList;
 import java.util.List;
 //import com.badlogic.gdx.graphics.Texture;
@@ -32,142 +37,92 @@ public class MyGdxGame extends ApplicationAdapter {
     //Texture img;
     // camera
     public PerspectiveCamera cam;
-    public CameraInputController camController;
+    public CustomCameraController camController;
     public ModelBatch modelBatch;
     // models
-    public Model model;
-    public ModelInstance instance;
-    public Model bottomWall;
-    public Model rightWall;
-    public Model cornerWall;
     public Model simpleAI;
     public List<ModelInstance> instances;
     //lighting
     public Environment environment;
-    
+
     // ai
-    SimpleAI ai;
+    private SimpleAI ai;
+
+    private MazeGenerator generator;
+    private MazeBuilder builder;
+
+    private RenderData data;
+
+    private MergedCubes cubes;
 
     @Override
     public void create() {
         //batch = new SpriteBatch();
         //img = new Texture("badlogic.jpg");
-
         initEnviroment();
         initCamera();
-        initModels();
-        initMaze();
+
+        generator = new MazeGenerator(15, 15);
+        generator.generate();
+        builder = new MazeBuilder();
+        builder.loadMazeModels(generator);
+
+        data = new RenderData();
+        data.onCreate();
+
+        modelBatch = new ModelBatch();
+        instances = new ArrayList<ModelInstance>();
+        instances.addAll(builder.getMazeParts());
+
         initAI();
+
+        cubes = new MergedCubes();
+        instances.add(cubes.get());
     }
 
     private void initCamera() {
-        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        // 67
+        cam = new PerspectiveCamera(75, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        //cam.position.set(10f, Settings.MAZE_SCALE/4f, 10f);
         cam.position.set(10f, 10f, 10f);
         cam.lookAt(0, 0, 0);
-        cam.near = 1f;
-        cam.far = 300f;
+        cam.up.set(0, 1, 0);
+        cam.near = 0.1f;
+      //  cam.far = 300f;
+        cam.far = 50f;
         cam.update();
 
-        camController = new CameraInputController(cam);
+        camController = new CustomCameraController(cam);
         Gdx.input.setInputProcessor(camController);
     }
 
+    private PointLight pLight;
+    private DirectionalLight dLight;
     private void initEnviroment() {
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
-        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
+        //dLight = new DirectionalLight().set(Color.BLACK, new Vector3(1,1,1));
+        //environment.add(dLight);
+        
+        pLight = new PointLight();
+        pLight.color.add(1, 1, 1, 1);
+        pLight.position.set(0,0,0);
+        pLight.intensity = 10;
+        environment.add(pLight);
     }
 
-    private void initModels() {
-        modelBatch = new ModelBatch();
+    ModelInstance aimodel;
 
-        ModelBuilder modelBuilder = new ModelBuilder();
-        model = modelBuilder.createBox(0.1f, 0.1f, 0.1f,
-                new Material(ColorAttribute.createDiffuse(Color.GREEN)),
-                Usage.Position | Usage.Normal);
-        instance = new ModelInstance(model);
-    }
-
-    private TreeNode<MazeCell> tree;
-    private void initMaze() {
-        ModelBuilder mb = new ModelBuilder();
-        instances = new ArrayList<ModelInstance>();
-        rightWall = mb.createBox(1f, 1f, 0.1f,
-                new Material(ColorAttribute.createDiffuse(Color.RED)),
-                Usage.Position | Usage.Normal);
-        bottomWall = mb.createBox(0.1f, 1f, 1f,
-                new Material(ColorAttribute.createDiffuse(Color.BLUE)),
-                Usage.Position | Usage.Normal);
-        cornerWall = mb.createBox(0.1f, 1f, 0.1f,
-                new Material(ColorAttribute.createDiffuse(Color.GREEN)),
-                Usage.Position | Usage.Normal);
-        MazeGenerator generator = new MazeGenerator(5, 5);
-        generator.generate();
-        MazeCell[][] grid = generator.getMazeAsGrid();
-        // maze if flipped over "z" axis relative to test code in maze generator
-        for (int i = 0; i < generator.getRows(); i++) {
-            for (int j = 0; j < generator.getColumns(); j++) {
-                MazeCell c = grid[i][j];
-                if (c.hasBottomWall()) {
-                    ModelInstance bw = new ModelInstance(bottomWall);
-                    bw.transform.setTranslation(i + 0.45f, 0.5f, j);
-                    instances.add(bw);
-                }
-                if (c.hasRightWall()) {
-                    ModelInstance bw = new ModelInstance(rightWall);
-                    bw.transform.setTranslation(i, 0.5f, j + 0.45f);
-                    instances.add(bw);
-                }
-
-                if (c.hasBottomWall() == false && c.hasRightWall() == false) {
-                    ModelInstance cw = new ModelInstance(cornerWall);
-                    cw.transform.setTranslation(i + 0.45f, 0.5f, j + 0.45f);
-                    instances.add(cw);
-                }
-            }
-        }
-        tree = generator.getMazeAsTree();
-    }
-    ModelInstance aimodel; 
-    private void initAI(){
+    private void initAI() {
         ModelBuilder mb = new ModelBuilder();
         simpleAI = mb.createBox(0.25f, 2f, 0.25f,
                 new Material(ColorAttribute.createDiffuse(Color.PURPLE)),
                 Usage.Position | Usage.Normal);
-        
+
         aimodel = new ModelInstance(simpleAI);
         instances.add(aimodel);
-        ai = new SimpleAI(tree,tree.getChildren().get(0));
-    }
-
-    // might casuse some catch misses
-
-    private final Quaternion rotQCamHelp = new Quaternion();
-    private void handleInputs() {
-        float x = 0;
-        float z = 0;
-        float rotY = 0;
-        float rotY2 = cam.view.getRotation(rotQCamHelp).getAngleAround(0, 1, 0);
-        float rad = (float)Math.toRadians(rotY2);
-        float sin = (float)Math.sin(rad)*0.1f;
-        float cos = (float)Math.cos(rad)*0.1f;
-        if (Gdx.input.isKeyPressed(Keys.W)) {
-            x += sin;
-            z -= cos;
-        }
-        if (Gdx.input.isKeyPressed(Keys.S)) {
-            x -= sin;
-            z += cos;
-        }
-        if (Gdx.input.isKeyPressed(Keys.A)) {
-            rotY = 1;
-        }
-        if (Gdx.input.isKeyPressed(Keys.D)) {
-            rotY = -1;
-        }
-        // uses degrees
-        cam.rotate(rotY, 0, 1, 0);
-        cam.translate(x, 0, z);
+        TreeNode<MazeCell> tree = generator.getMazeAsTree();
+        ai = new SimpleAI(tree, tree.getChildren().get(0));
     }
 
     @Override
@@ -177,24 +132,48 @@ public class MyGdxGame extends ApplicationAdapter {
         //batch.begin();
         //batch.draw(img, 0, 0);
         //batch.end();
-        handleInputs();
         ai.update();
         ModelInstance mi = instances.get(instances.indexOf(aimodel));
         mi.transform.setTranslation(ai.getPosition().y, 1, ai.getPosition().x);
-       // System.out.println(mi.transform);
-        cam.update();
-        //camController.update();
+        Vector3 t = new Vector3();
+        mi.transform.getTranslation(t);
+        pLight.setPosition(t);
 
-        Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-        Gdx.gl.glCullFace(GL20.GL_BACK);
+        camController.update();
+        cam.update();
+
+        Gdx.gl20.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Gdx.gl20.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+        Gdx.gl20.glCullFace(GL20.GL_BACK);
 
         modelBatch.begin(cam);
-        modelBatch.render(instance, environment);
         for (ModelInstance i : instances) {
-            modelBatch.render(i, environment);
+            if (isVisible(cam, i)) {
+                modelBatch.render(i, environment);
+                data.setVisibleCount(data.getVisibleCount() + 1);
+            }
         }
         modelBatch.end();
+
+        data.onDraw();
+        data.setVisibleCount(0);
+    }
+
+    private List<BoundingBox> boxes = null;
+
+    private boolean isVisible(Camera cam, ModelInstance instance) {
+        if(instance.equals(aimodel)){
+            return true;
+        }
+        if(boxes==null){
+            boxes = new ArrayList<BoundingBox>();
+            for(ModelInstance i : instances){
+                BoundingBox out = new BoundingBox();
+                i.calculateBoundingBox(out);
+                boxes.add(out);
+            }
+        }
+        return cam.frustum.boundsInFrustum(boxes.get(instances.indexOf(instance)));
     }
 
     @Override
@@ -202,12 +181,11 @@ public class MyGdxGame extends ApplicationAdapter {
         //batch.dispose();
         //img.dispose();
         modelBatch.dispose();
-        model.dispose();
 
-        bottomWall.dispose();
-        rightWall.dispose();
-        cornerWall.dispose();
-        
+        builder.dispose();
+
         simpleAI.dispose();
+
+        cubes.dispose();
     }
 }

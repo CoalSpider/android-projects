@@ -29,7 +29,7 @@ public class SimpleAI {
 
     Vector2 position = null;
 
-    private static final float SPEED = 0.05f;
+    private static final float SPEED = 0.1f;
     private static final Random RANDOM = new Random(1993);
     private static final float NEARNESS = 1e-2f;
 
@@ -44,7 +44,6 @@ public class SimpleAI {
 
     public void update() {
         if (arrivedAtTarget()) {
-            System.out.println("picking target");
             pickNextTarget();
         }
         move();
@@ -86,11 +85,12 @@ public class SimpleAI {
         Vector2 moveAmount = this.direction.getVect().scl(SPEED);
         float lengthMovement = moveAmount.len2();
         float distToTarget = getDistToTargetSqrd();
+        // set to target if trying to pass target
         if(distToTarget < lengthMovement){
-            float scale = distToTarget/lengthMovement;
-            moveAmount.scl(scale);
+            this.position.set(this.target.getData().asVector());
+        } else {
+            this.position.add(moveAmount);
         }
-        this.position.add(moveAmount);
     }
     
     float getDistToTargetSqrd(){

@@ -3,12 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mygdx.util2;
+package com.mygdx.model;
 
 /**
  *
  * @author Ben Norman
  */
-public class Settings {
-    public static final float MAZE_SCALE = 1;
+public class Sword {
+    
 }
