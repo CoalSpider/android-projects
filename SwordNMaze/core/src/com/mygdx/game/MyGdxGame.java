@@ -2,6 +2,7 @@ package com.mygdx.game;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -17,12 +18,12 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.environment.PointLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.math.collision.BoundingBox;
 import com.mygdx.ai.SimpleAI;
 import com.mygdx.maze.MazeCell;
 import com.mygdx.maze.MazeGenerator;
+import com.mygdx.model.GameModel;
 import com.mygdx.model.MazeBuilder;
-import com.mygdx.model.MergedCubes;
+import com.mygdx.model.Sword;
 import com.mygdx.util2.TreeNode;
 import com.mygdx.view.CustomCameraController;
 import com.mygdx.view.RenderData;
@@ -41,7 +42,7 @@ public class MyGdxGame extends ApplicationAdapter {
     public ModelBatch modelBatch;
     // models
     public Model simpleAI;
-    public List<ModelInstance> instances;
+    public List<GameModel> instances;
     //lighting
     public Environment environment;
 
@@ -53,7 +54,9 @@ public class MyGdxGame extends ApplicationAdapter {
 
     private RenderData data;
 
-    private MergedCubes cubes;
+    // private MergedCubes cubes;
+    private Sword sword;
+    private GameModel swordI;
 
     @Override
     public void create() {
@@ -71,13 +74,17 @@ public class MyGdxGame extends ApplicationAdapter {
         data.onCreate();
 
         modelBatch = new ModelBatch();
-        instances = new ArrayList<ModelInstance>();
+        instances = new ArrayList<GameModel>();
         instances.addAll(builder.getMazeParts());
 
         initAI();
 
-        cubes = new MergedCubes();
-        instances.add(cubes.get());
+        // cubes = new MergedCubes();
+        //  instances.add(cubes.get());
+        sword = new Sword();
+        sword.initModel();
+        swordI = sword.getModelInstance();
+        instances.add(swordI);
     }
 
     private void initCamera() {
@@ -88,7 +95,7 @@ public class MyGdxGame extends ApplicationAdapter {
         cam.lookAt(0, 0, 0);
         cam.up.set(0, 1, 0);
         cam.near = 0.1f;
-      //  cam.far = 300f;
+        //  cam.far = 300f;
         cam.far = 50f;
         cam.update();
 
@@ -98,20 +105,21 @@ public class MyGdxGame extends ApplicationAdapter {
 
     private PointLight pLight;
     private DirectionalLight dLight;
+
     private void initEnviroment() {
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         //dLight = new DirectionalLight().set(Color.BLACK, new Vector3(1,1,1));
         //environment.add(dLight);
-        
+
         pLight = new PointLight();
         pLight.color.add(1, 1, 1, 1);
-        pLight.position.set(0,0,0);
+        pLight.position.set(0, 0, 0);
         pLight.intensity = 10;
         environment.add(pLight);
     }
 
-    ModelInstance aimodel;
+    private GameModel aimodel;
 
     private void initAI() {
         ModelBuilder mb = new ModelBuilder();
@@ -119,12 +127,13 @@ public class MyGdxGame extends ApplicationAdapter {
                 new Material(ColorAttribute.createDiffuse(Color.PURPLE)),
                 Usage.Position | Usage.Normal);
 
-        aimodel = new ModelInstance(simpleAI);
+        aimodel = new GameModel(simpleAI);
         instances.add(aimodel);
         TreeNode<MazeCell> tree = generator.getMazeAsTree();
         ai = new SimpleAI(tree, tree.getChildren().get(0));
     }
 
+    float xRot,yRot,zRot,rot;
     @Override
     public void render() {
         //Gdx.gl.glClearColor(1, 0, 0, 1);
@@ -141,13 +150,18 @@ public class MyGdxGame extends ApplicationAdapter {
 
         camController.update();
         cam.update();
+        
+        //sword.placeInFrontOfCamera(cam);
+        //sword.advanceTestAnim();
+        //sword.pointAtTest(Gdx.input.getX(), Gdx.input.getY());
+        sword.pointAtTest(cam, Gdx.input.getX(), Gdx.input.getY());
 
         Gdx.gl20.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.gl20.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         Gdx.gl20.glCullFace(GL20.GL_BACK);
 
         modelBatch.begin(cam);
-        for (ModelInstance i : instances) {
+        for (GameModel i : instances) {
             if (isVisible(cam, i)) {
                 modelBatch.render(i, environment);
                 data.setVisibleCount(data.getVisibleCount() + 1);
@@ -159,21 +173,15 @@ public class MyGdxGame extends ApplicationAdapter {
         data.setVisibleCount(0);
     }
 
-    private List<BoundingBox> boxes = null;
+    private Vector3 position = new Vector3();
 
-    private boolean isVisible(Camera cam, ModelInstance instance) {
-        if(instance.equals(aimodel)){
-            return true;
+    private boolean isVisible(Camera cam, GameModel instance) {
+        instance.transform.getTranslation(position);
+        position.add(instance.getCenter());
+        if(instance.transform.hasRotationOrScaling()==false){
+            return cam.frustum.boundsInFrustum(position, instance.getDimensions());
         }
-        if(boxes==null){
-            boxes = new ArrayList<BoundingBox>();
-            for(ModelInstance i : instances){
-                BoundingBox out = new BoundingBox();
-                i.calculateBoundingBox(out);
-                boxes.add(out);
-            }
-        }
-        return cam.frustum.boundsInFrustum(boxes.get(instances.indexOf(instance)));
+        return cam.frustum.sphereInFrustum(position, instance.getRadius());
     }
 
     @Override
@@ -186,6 +194,6 @@ public class MyGdxGame extends ApplicationAdapter {
 
         simpleAI.dispose();
 
-        cubes.dispose();
+        // cubes.dispose();
     }
 }

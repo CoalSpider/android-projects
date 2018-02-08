@@ -18,7 +18,6 @@ import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.shapebuilders.BoxShapeBuilder;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.mygdx.maze.MazeCell;
 import com.mygdx.maze.MazeGenerator;
@@ -44,7 +43,7 @@ public class MazeBuilder {
     private Model rightWall;
     private Model cornerWall;
 
-    private final List<ModelInstance> mazeParts = new ArrayList<ModelInstance>();
+    private final List<GameModel> mazeParts = new ArrayList<GameModel>();
 
     public void loadMazeModels(MazeGenerator generator) {
         initModels();
@@ -59,7 +58,7 @@ public class MazeBuilder {
     }
 
     public void loadMergedInstances(MazeCell[][] grid) {
-        this.loadMergedInstances(grid, 16);
+        this.loadMergedInstances(grid, 1);
     }
 
     // chunks maze into equal size bits
@@ -78,7 +77,7 @@ public class MazeBuilder {
                     buildCell(modelBuilder, grid, i, j);
                 }
             }
-            mazeParts.add(new ModelInstance(modelBuilder.end()));
+            mazeParts.add(new GameModel(modelBuilder.end()));
             if (startI == grid.length - size) {
                 startJ += size;
                 startI = 0;
@@ -123,7 +122,7 @@ public class MazeBuilder {
         cornerWall.dispose();
     }
 
-    public List<ModelInstance> getMazeParts() {
+    public List<GameModel> getMazeParts() {
         return mazeParts;
     }
 }

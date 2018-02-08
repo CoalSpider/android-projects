@@ -1,0 +1,24 @@
+// after alignment with camera
+// start -> -Z == cw rot (pinwheel)
+// start -> +Z == ccw rot
+// start -> +x == tilt back (chop)
+// start -> -x == tilt forward
+// start -> +y == ccw spin
+// start -> -y == cw spin
+
+Cut TR to BL
+TopRight::X -90 --> Z +75 --> X +45
+BottomLeft::X -90 --> Z -75 --> X -45
+
+Cut TL to BR
+TopLeft::X -90 --> Z -75 --> X +45
+BottomRight::X -90 --> Z +75 --> X -45
+
+Chop around circle
+X -90 (tilt to straight)
+Z AngleX (left right movement)
+X tilt up/down between angles
+
+rX + rY == sorta slash
+
+for edge alignment apply as last rotation
