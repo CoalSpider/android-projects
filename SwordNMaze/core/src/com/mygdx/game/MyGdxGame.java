@@ -94,7 +94,7 @@ public class MyGdxGame extends ApplicationAdapter {
         cam.position.set(10f, 10f, 10f);
         cam.lookAt(0, 0, 0);
         cam.up.set(0, 1, 0);
-        cam.near = 0.1f;
+        cam.near = 0.01f;
         //  cam.far = 300f;
         cam.far = 50f;
         cam.update();

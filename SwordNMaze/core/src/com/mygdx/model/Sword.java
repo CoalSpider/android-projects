@@ -33,7 +33,7 @@ public class Sword {
 
     public void initModel() {
         ModelBuilder mb = new ModelBuilder();
-        swordModel = mb.createBox(0.1f, 1.1f, 0.1f,
+        swordModel = mb.createBox(0.05f, 1.1f, 0.05f,
                 new Material(ColorAttribute.createDiffuse(Color.PINK)),
                 VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         swordInstance = new GameModel(swordModel);
@@ -43,22 +43,17 @@ public class Sword {
     private final Vector3 yAxis = new Vector3(0, 1, 0);
 
     public void placeInFrontOfCamera(Camera cam) {
-        // camera location
-        Vector3 pos = cam.position.cpy();
-        // camera rotation // for now we assume we are only about to rotate around y axis
+        // camera rotation around y axis
         float rotY = cam.view.getRotation(rotation).getAngleAround(yAxis);
-        float rotationShiftDegs = 0;
-        float rad = (float) Math.toRadians(rotY + rotationShiftDegs); // shift a little to right
+        rotY += 0; // shift a little
+        float rad = (float) Math.toRadians(rotY);
         float sin = (float) Math.sin(rad);
         float cos = (float) Math.cos(rad);
         // move one unit out in front of camera
-        pos.add(sin, 0, -cos);
-        // set position and negate camera rotation
-        //swordInstance.transform.set(pos, new Quaternion(yAxis, -rotY));
-        swordInstance.transform.set(pos, new Quaternion(yAxis, -rotY));
-        // rotate 45 degrees around local y axis (minus a shift)
-        //swordInstance.transform.rotate(yAxis, 45-rotationShiftDegs);
+        Vector3 pos = cam.position.cpy().add(sin, 0, -cos);
 
+        // set position and negate camera rotation
+        swordInstance.transform.set(pos, new Quaternion(yAxis, -rotY));
     }
 
     private Quaternion start = new RotationComposer().rX(-90).rZ(75).rX(45).getComposition();
@@ -80,23 +75,29 @@ public class Sword {
     }
 
     public void pointAtTest(Camera cam, float mouseX, float mouseY) {
+        // get rotation to current mouse location
         Vector3 posA = swordInstance.transform.getTranslation(new Vector3());
-        Vector3 posB = cam.unproject(new Vector3(mouseX,mouseY,1));
-        Vector3 dir = posB.sub(posA).nor().scl(1, -1, 1); // flip y axos
-        // get rotation matrix
-        Matrix4 rotmat = new Matrix4().setToRotation(dir, yAxis);
+        Vector3 posB = cam.unproject(new Vector3(mouseX, mouseY, 1));
+        Vector3 dir = posB.sub(posA).nor().scl(1, -1, 1); // flip y axis
+        Quaternion rot = new Quaternion().setFromMatrix(new Matrix4().setToRotation(dir, yAxis));
         
-        float rotY = cam.view.getRotation(rotation).getAngleAround(yAxis);
-        rotY += 0; // shift a little
-        float rad = (float) Math.toRadians(rotY);
+        // get the camera rotation around Y
+        float rotY = cam
+                .view
+                .getRotation(rotation)
+                .getAngleAround(yAxis);
+        
+        // translate 1 unit out from the current camera position
+        float rad = (float) Math.toRadians(rotY+30); // shift right a little
         float sin = (float) Math.sin(rad);
         float cos = (float) Math.cos(rad);
+        Vector3 newPos = new Vector3(sin, 0, -cos).scl(0.25f).add(cam.position);
         
-        // move one unit out in front of camera
-        Vector3 newPos = new Vector3(sin,0,-cos).add(cam.position);
-        Quaternion newRot = new Quaternion().setFromMatrix(rotmat);
-        //swordInstance.transform.set(newPos, newRot);
-        swordInstance.transform.idt().translate(newPos).rotate(newRot).rotate(yAxis, -rotY);
+        // set to point at mouse and translate
+        // negate camera rotation on y --> now rotate to point --> 
+        // ???
+        // --> now translate
+        swordInstance.transform.idt().translate(newPos).rotate(rot).translate(0, -0.5f, 0).rotate(yAxis, -rotY);
     }
     
     public GameModel getModelInstance() {
